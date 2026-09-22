@@ -517,6 +517,9 @@ Entries with a [Glama connector](https://glama.ai/mcp/connectors) badge have bee
 - [Autoview](https://autoview.com/) `https://api.autoview.com/mcp/`
   [![Autoview MCP connector](https://glama.ai/mcp/connectors/io.github.autoview-com/mcp/badges/score.svg)](https://glama.ai/mcp/connectors/io.github.autoview-com/mcp)
   🔓 - Trade across 22+ exchanges and brokers from any MCP-capable AI agent; dry-run by default, live trading on Kraken and Crypto.com.
+- [BrinkerAdvisor Rates](https://mcp.brinkeradvisor.com/support) `https://mcp.brinkeradvisor.com/mcp`
+  [![BrinkerAdvisor Rates MCP connector](https://glama.ai/mcp/connectors/com.brinkeradvisor.mcp/brinker-advisor-rates/badges/score.svg)](https://glama.ai/mcp/connectors/com.brinkeradvisor.mcp/brinker-advisor-rates)
+  🔓 - Search public CD, money-market and Treasury records with source dates; compare rates and build illustrative ladders.
 - [Business Verify](https://mbiyepyh.gensparkclaw.com/docs) `https://mbiyepyh.gensparkclaw.com/mcp`
   [![Business Verify MCP connector](https://glama.ai/mcp/connectors/com.gensparkclaw.mbiyepyh/business-verify/badges/score.svg)](https://glama.ai/mcp/connectors/com.gensparkclaw.mbiyepyh/business-verify)
   🔑 - Verify a US business exists and is active by name and state: status, formation date, registered agent. Prepaid API key, $0.05 per call.
@@ -1289,3 +1292,4 @@ Entries with a [Glama connector](https://glama.ai/mcp/connectors) badge have bee
 ## Contributing
 
 Found a remote server that belongs here? See [CONTRIBUTING.md](CONTRIBUTING.md).
+

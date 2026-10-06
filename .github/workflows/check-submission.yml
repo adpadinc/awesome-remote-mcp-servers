@@ -126,6 +126,9 @@ jobs:
             });
 
             async function probe(url) {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 20000);
+              let reader;
               try {
                 const res = await fetch(url, {
                   method: 'POST',
@@ -137,13 +140,33 @@ jobs:
                   },
                   body: initBody,
                   redirect: 'follow',
-                  signal: AbortSignal.timeout(20000),
+                  signal: controller.signal,
                 });
                 if (res.status === 401 || res.status === 403) {
                   const wa = res.headers.get('www-authenticate') || '';
                   return { ok: true, auth: /resource_metadata|Bearer/i.test(wa) ? '🔐' : '🔑', status: res.status };
                 }
-                const text = (await res.text()).slice(0, 20000);
+                // Bound bytes as they arrive, including chunked/decompressed
+                // responses. A string slice after res.text() is too late.
+                const maxBytes = 20000;
+                const contentLength = res.headers.get('content-length');
+                if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > maxBytes) {
+                  throw new Error('initialize response exceeds 20000 bytes');
+                }
+                const decoder = new TextDecoder();
+                const chunks = [];
+                let byteLength = 0;
+                if (res.body) {
+                  reader = res.body.getReader();
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    byteLength += value.byteLength;
+                    if (byteLength > maxBytes) throw new Error('initialize response exceeds 20000 bytes');
+                    chunks.push(decoder.decode(value, { stream: true }));
+                  }
+                }
+                const text = chunks.join('') + decoder.decode();
                 const payload = text.includes('data:')
                   ? text.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).join('')
                   : text;
@@ -153,6 +176,13 @@ jobs:
                 return { ok: false, status: res.status, why: `no initialize result (HTTP ${res.status})` };
               } catch (err) {
                 return { ok: false, why: String(err.message || err).slice(0, 120) };
+              } finally {
+                controller.abort();
+                if (reader) {
+                  void reader.cancel().catch(() => {});
+                  reader.releaseLock();
+                }
+                clearTimeout(timeout);
               }
             }
 

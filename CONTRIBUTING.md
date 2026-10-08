@@ -18,6 +18,14 @@ A submission must:
 
 Servers that require a per-user endpoint URL, or that fail the handshake behind a paywall, are not listed.
 
+Submit at most five entries in one pull request. Larger batches fail validation
+before any endpoint is contacted; split them into smaller submissions. Each
+validation job has a five-minute limit, and a newer run replaces an older run for
+the same pull request. Endpoint and badge checks use credential-free HTTP(S),
+public DNS answers pinned to each connection, and at most three validated
+redirects. Private, reserved and credential-bearing destinations and HTTPS
+downgrades are rejected. Diagnostics render submitted fields as literal text.
+
 ## Entry format
 
 One entry, three lines:

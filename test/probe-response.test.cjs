@@ -4,10 +4,10 @@ const { join } = require('node:path');
 const { Script } = require('node:vm');
 const test = require('node:test');
 
-// Execute the actual inline probe, without GitHub credentials or network I/O.
-const workflow = readFileSync(join(__dirname, '../.github/workflows/check-submission.yml'), 'utf8');
-const start = workflow.indexOf('            const initBody =');
-const end = workflow.indexOf('            async function connectorExists', start);
+// Execute the actual probe, without GitHub credentials or network I/O.
+const workflow = readFileSync(join(__dirname, '../scripts/validate-submission.cjs'), 'utf8');
+const start = workflow.indexOf('const initBody =');
+const end = workflow.indexOf('async function connectorExists', start);
 assert.ok(start >= 0 && end > start);
 const source = workflow.slice(start, end).replace(/^            /gm, '');
 
@@ -16,7 +16,7 @@ function fixture(response) {
   const script = new Script(`${source}\nprobe;`);
   const probe = script.runInNewContext({
     AbortController, TextDecoder, setTimeout, clearTimeout,
-    fetch: async (_url, options) => { signal = options.signal; return response; }
+    fetchPublic: async (_url, options) => { signal = options.signal; return response; }
   });
   return { probe, aborted: () => signal.aborted };
 }

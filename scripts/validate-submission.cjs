@@ -84,6 +84,18 @@ const initBody = JSON.stringify({
   },
 });
 
+function isInitializeResponse(text) {
+  let value;
+  try { value = JSON.parse(text); } catch { return false; }
+  const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const nonempty = value => typeof value === 'string' && value.trim().length > 0;
+  return object(value) && value.jsonrpc === '2.0' && value.id === 1 &&
+    !Object.hasOwn(value, 'error') && object(value.result) &&
+    nonempty(value.result.protocolVersion) && object(value.result.capabilities) &&
+    object(value.result.serverInfo) && nonempty(value.result.serverInfo.name) &&
+    nonempty(value.result.serverInfo.version);
+}
+
 async function probe(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
@@ -105,16 +117,36 @@ async function probe(url) {
       const wa = res.headers.get('www-authenticate') || '';
       return { ok: true, auth: /resource_metadata|Bearer/i.test(wa) ? '🔐' : '🔑', status: res.status };
     }
-    // Bound bytes as they arrive, including chunked/decompressed
-    // responses. A string slice after res.text() is too late.
+    const failed = () => ({ ok: false, status: res.status, why: `no initialize result (HTTP ${res.status})` });
+    if (res.status < 200 || res.status >= 300) return failed();
+    // Bound bytes as they arrive, including chunked/decompressed responses.
     const maxBytes = 20000;
     const contentLength = res.headers.get('content-length');
     if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > maxBytes) {
       throw new Error('initialize response exceeds 20000 bytes');
     }
     const decoder = new TextDecoder();
+    const isSse = /^text\/event-stream(?:\s*;|$)/i.test(res.headers.get('content-type') || '');
     const chunks = [];
-    let byteLength = 0;
+    let byteLength = 0, line = '', data = [], skipLf = false;
+    // Dispatch one SSE event at a time. A notification is not the response, and
+    // a matching response need not wait for the server to close its stream.
+    const consumeSse = text => {
+      for (const char of text) {
+        if (skipLf) { skipLf = false; if (char === '\n') continue; }
+        if (char !== '\r' && char !== '\n') { line += char; continue; }
+        skipLf = char === '\r';
+        if (line === '') {
+          const initialized = data.length > 0 && isInitializeResponse(data.join('\n'));
+          data = [];
+          if (initialized) return true;
+        } else if (line === 'data' || line.startsWith('data:')) {
+          data.push(line.slice(5).replace(/^ /, ''));
+        }
+        line = '';
+      }
+      return false;
+    };
     if (res.body) {
       reader = res.body.getReader();
       while (true) {
@@ -122,17 +154,15 @@ async function probe(url) {
         if (done) break;
         byteLength += value.byteLength;
         if (byteLength > maxBytes) throw new Error('initialize response exceeds 20000 bytes');
-        chunks.push(decoder.decode(value, { stream: true }));
+        const text = decoder.decode(value, { stream: true });
+        if (isSse) {
+          if (consumeSse(text)) return { ok: true, auth: '🔓', status: res.status };
+        } else chunks.push(text);
       }
     }
-    const text = chunks.join('') + decoder.decode();
-    const payload = text.includes('data:')
-      ? text.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).join('')
-      : text;
-    let json = null;
-    try { json = JSON.parse(payload); } catch {}
-    if (json && json.result) return { ok: true, auth: '🔓', status: res.status };
-    return { ok: false, status: res.status, why: `no initialize result (HTTP ${res.status})` };
+    const tail = decoder.decode();
+    const initialized = isSse ? consumeSse(tail) : isInitializeResponse(chunks.join('') + tail);
+    return initialized ? { ok: true, auth: '🔓', status: res.status } : failed();
   } catch (err) {
     return { ok: false, why: String(err.message || err).slice(0, 120) };
   } finally {

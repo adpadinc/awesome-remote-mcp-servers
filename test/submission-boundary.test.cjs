@@ -3,7 +3,7 @@ const test = require('node:test');
 const publicFetch = require('../scripts/public-fetch.cjs');
 const validate = require(process.env.VALIDATOR_MODULE || '../scripts/validate-submission.cjs');
 
-function fixture(t, lines, response = () => new Response('{"result":{}}')) {
+function fixture(t, lines, response = () => new Response('{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"fixture","version":"1.0"}}}')) {
   const probes = [], comments = [], labels = [], removals = [];
   const fetch = async url => { probes.push(url); return response(url); };
   t.mock.method(publicFetch, 'fetchPublic', fetch);
@@ -48,7 +48,7 @@ test('untrusted names, markers, endpoint errors and badge slugs cannot inject Ma
     '- [`<script>**name**](https://fixture.example) `https://other.example/mcp`',
   ], url => {
     if (url.includes('other')) throw new Error('`[spoof](https://evil.example) <img> @team');
-    return new Response('{"result":{}}');
+    return new Response('{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{},"serverInfo":{"name":"fixture","version":"1.0"}}}');
   });
   await f.run();
   const output = f.comments.join('\n');

@@ -1,0 +1,26 @@
+name: Boundary Checks
+
+on:
+  pull_request:
+    paths: ['.github/workflows/**', 'scripts/**', 'test/**']
+  push:
+    branches: [main]
+    paths: ['.github/workflows/**', 'scripts/**', 'test/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: boundaries-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Verify workflow and public-probe boundaries
+        run: node --test test/*.test.cjs

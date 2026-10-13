@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Post welcome comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -50,13 +50,13 @@ jobs:
       # Checks out the BASE branch, never PR-authored code. Do not change this
       # to check out the head ref: this workflow runs with write permissions.
       - name: Checkout base branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Validate PR submission
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const validateSubmission = require('./scripts/validate-submission.cjs');
